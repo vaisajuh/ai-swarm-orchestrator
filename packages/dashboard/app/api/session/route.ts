@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
   browserOrigin,
+  cleanSignInCode,
   constantTimeEqual,
   mismatchHint,
   normalizeToken,
@@ -15,7 +16,7 @@ import { redeemSignInCode } from "../../../lib/hub-server.ts";
 export async function POST(request: NextRequest) {
   const form = await request.formData();
   const token = normalizeToken(String(form.get("token") ?? ""));
-  const code = String(form.get("code") ?? "");
+  const code = cleanSignInCode(String(form.get("code") ?? ""));
   const next = safeNext(String(form.get("next") ?? "/"));
   const expected = process.env.ASO_TOKEN;
   if (expected && code) {

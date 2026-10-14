@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { browserOrigin, isPublicPath, isSameOrigin, isSignedIn, mismatchHint, normalizeToken, redirectTo, safeNext, signInLink } from "../lib/auth.ts";
+import { browserOrigin, isPublicPath, isSameOrigin, isSignedIn, mismatchHint, normalizeToken, redirectTo, safeNext, signInLink, cleanSignInCode } from "../lib/auth.ts";
 import { errorMessage, hubPath } from "../lib/hub-routes.ts";
 
 describe("console sign-in", () => {
@@ -116,5 +116,14 @@ describe("sign-in links", () => {
   it("point at the login page with the code, on the console's own address", () => {
     assert.equal(signInLink("https://agent007.tailc9777f.ts.net", "Ab_9-x"), "https://agent007.tailc9777f.ts.net/login?code=Ab_9-x");
     assert.equal(signInLink("http://192.168.101.127:7421/", "c"), "http://192.168.101.127:7421/login?code=c");
+  });
+});
+
+describe("sign-in codes from chat apps", () => {
+  it("drops punctuation that formatting glued to the link", () => {
+    const code = "lTo6FMh9X5THpEeq4yBd8tH6";
+    for (const raw of [code, `${code}**`, `${code}).`, ` ${code}\n`, `${code}>`, `${code}%2A%2A`]) assert.equal(cleanSignInCode(raw), code, raw);
+    assert.equal(cleanSignInCode(undefined), "");
+    assert.equal(cleanSignInCode("**abc"), "", "junk in front is not guessed at");
   });
 });

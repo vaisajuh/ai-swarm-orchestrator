@@ -83,6 +83,15 @@ export function redirectTo(path: string, headers: Headers, fallbackOrigin: strin
   return new Response(null, { status, headers: { location: new URL(path, browserOrigin(headers, fallbackOrigin)).href } });
 }
 
+/**
+ * The code from a sign-in link as a person's device delivered it. Chat apps and markdown often
+ * glue punctuation to a tapped URL (`…code=abc**`, `…code=abc).`), so keep only the leading
+ * run of URL-safe base64 characters codes are made of.
+ */
+export function cleanSignInCode(raw: string | null | undefined): string {
+  return /^[A-Za-z0-9_-]*/.exec(raw?.trim() ?? "")![0];
+}
+
 /** The link that signs a device in with a one-time code (the code is URL-safe base64). */
 export function signInLink(origin: string, code: string): string {
   const url = new URL("/login", origin);
