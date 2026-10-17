@@ -103,6 +103,7 @@ prohibited outright.
 | Effort | `high` | `--effort low…max` |
 | Spend cap per task (estimated) | $5 | `--task-budget` |
 | Spend cap per planning round (estimated) | $3 | `--plan-budget` |
+| Model turns per task attempt or planning round | 80 | `--max-turns` |
 | Concurrent model requests | 2 | `--llm-concurrency` |
 
 The dashboard and `GET /api/llm` show calls and estimated spend; each task shows its own
@@ -632,6 +633,7 @@ failure), and so do the dashboard and `aso sync`.
 | `--effort <level>` | `high` | `low`, `medium`, `high`, `xhigh`, `max` |
 | `--task-budget <usd>` | `5` | Estimated LLM spend cap per task |
 | `--plan-budget <usd>` | `3` | Estimated LLM spend cap per planning round |
+| `--max-turns <n>` | `80` | Model turns per task attempt or planning round. The agent is told to wrap up in its last 10; if it is still cut off, its unfinished work is pushed to the task branch for a retry |
 | `--llm-concurrency <n>` | `4` | Concurrent model requests across all workers and the Architect; jobs beyond it wait their turn |
 | `--no-dashboard` | | Skip the dashboard (not supported with `--docker`) |
 | `--no-architect` | | Do not start the Architect |
@@ -852,7 +854,7 @@ For the scoring formula, see [ARCHITECTURE.md](ARCHITECTURE.md#6-hardware-aware-
 | `ASO_ALLOW_DEPS` | *(any)* | Default for `--allow-deps` (also passed into the container) |
 | `ANTHROPIC_API_KEY` | *(none)* | Hub only. Without it, agents fail tasks with "no LLM configured" |
 | *(file)* `.env` | — | Loaded on start: the shell's variables win, then `ASO_ENV_FILE`, then `~/.config/aso/.env`, then a source checkout's `.env`. See `.env.example` |
-| `ASO_MODEL`, `ASO_EFFORT`, `ASO_TASK_BUDGET`, `ASO_PLAN_BUDGET`, `ASO_LLM_CONCURRENCY` | see flags | Defaults for the LLM flags (also passed into the container) |
+| `ASO_MODEL`, `ASO_EFFORT`, `ASO_TASK_BUDGET`, `ASO_PLAN_BUDGET`, `ASO_MAX_TURNS`, `ASO_LLM_CONCURRENCY` | see flags | Defaults for the LLM flags (also passed into the container) |
 | `ASO_PUSH_CONTACT` | project URL | Contact (`mailto:` or `https:`) sent to push services with notifications (VAPID `sub`) |
 | `ASO_UPDATE_SPEC` | `@aso/cli@latest` | Default source for `aso update` |
 

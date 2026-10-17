@@ -25,6 +25,7 @@ export interface StartHubOptions {
   effort: Effort;
   taskBudget: number;
   planBudget: number;
+  maxTurns: number;
   llmConcurrency: number;
 }
 
@@ -57,6 +58,7 @@ export async function startHubCommand(opts: StartHubOptions): Promise<void> {
       effort: opts.effort,
       taskBudgetUsd: opts.taskBudget,
       planBudgetUsd: opts.planBudget,
+      maxTurns: opts.maxTurns,
       concurrency: opts.llmConcurrency,
     },
   });
@@ -109,6 +111,7 @@ async function startHubInDocker(root: string, opts: StartHubOptions, token: stri
       ASO_EFFORT: opts.effort,
       ASO_TASK_BUDGET: String(opts.taskBudget),
       ASO_PLAN_BUDGET: String(opts.planBudget),
+      ASO_MAX_TURNS: String(opts.maxTurns),
       ASO_LLM_CONCURRENCY: String(opts.llmConcurrency),
     },
   });

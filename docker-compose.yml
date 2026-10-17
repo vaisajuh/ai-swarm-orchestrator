@@ -29,6 +29,7 @@ services:
       ASO_EFFORT: "${ASO_EFFORT:-high}"
       ASO_TASK_BUDGET: "${ASO_TASK_BUDGET:-5}"
       ASO_PLAN_BUDGET: "${ASO_PLAN_BUDGET:-3}"
+      ASO_MAX_TURNS: "${ASO_MAX_TURNS:-80}"
       ASO_LLM_CONCURRENCY: "${ASO_LLM_CONCURRENCY:-4}"
       # Read from the environment of `aso start-hub --docker`; never baked into the image.
       ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"

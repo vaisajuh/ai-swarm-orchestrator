@@ -277,7 +277,7 @@ export class ConversationManager {
     }
 
     // A later turn with no tool results follows a reply that ended without tool calls.
-    const userMessage: Anthropic.Beta.BetaMessageParam =
+    const base: Anthropic.Beta.BetaMessageParam =
       req.turn === 0
         ? { role: "user", content: subject.firstPrompt() }
         : req.toolResults.length === 0
@@ -291,6 +291,8 @@ export class ConversationManager {
               is_error: r.isError,
             })),
           };
+
+    const userMessage = withTurnWarning(base, this.maxTurns - req.turn, subject.kind);
 
     if (req.turn > 0 && req.toolResults.length) {
       const names = new Map(conv.results.get(req.turn - 1)?.toolCalls.map((c) => [c.id, c.name]) ?? []);
@@ -419,6 +421,24 @@ class Semaphore {
   status() {
     return { running: this.running, waiting: this.waiting.length, limit: this.limit };
   }
+}
+
+/** Turns before the limit at which the agent is told to wrap up. */
+export const TURN_WARNING = 10;
+
+/**
+ * Near the turn limit, tell the agent how many turns it has left, so it hands in what it has
+ * instead of being cut off mid-work. Added as text after the turn's tool results.
+ */
+export function withTurnWarning(message: Anthropic.Beta.BetaMessageParam, turnsLeft: number, kind: "task" | "plan"): Anthropic.Beta.BetaMessageParam {
+  if (turnsLeft > TURN_WARNING) return message;
+  const wrapUp =
+    kind === "task"
+      ? "Wrap up now: get the checks passing with what you have and call finish, listing anything left undone in the summary."
+      : "Wrap up now: call submit_plan with your best plan (or ask_questions if you can't plan without answers).";
+  const text = `[ASO] ${turnsLeft} model turn${turnsLeft === 1 ? "" : "s"} left in this round, counting this one. ${wrapUp}`;
+  const blocks = typeof message.content === "string" ? [{ type: "text" as const, text: message.content }] : message.content;
+  return { ...message, content: [...blocks, { type: "text" as const, text }] };
 }
 
 const round = (n: number) => Math.round(n * 10_000) / 10_000;

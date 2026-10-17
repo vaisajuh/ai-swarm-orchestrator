@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { rmSync } from "node:fs";
 import { describe, it } from "node:test";
 import Anthropic from "@anthropic-ai/sdk";
-import { AnthropicApiAdapter, DEFAULT_PLAN_BUDGET_USD, LlmError, priceUsage, taskPrompt, type LlmRequest } from "@aso/hub";
+import { AnthropicApiAdapter, DEFAULT_PLAN_BUDGET_USD, LlmError, priceUsage, taskPrompt, TURN_WARNING, withTurnWarning, type LlmRequest } from "@aso/hub";
 import { createMessage, type AgentMessage } from "@aso/shared";
 import { startWorker } from "@aso/worker";
 import {
@@ -213,6 +213,19 @@ describe("LLM gateway (Hub)", () => {
     assert.equal(DEFAULT_PLAN_BUDGET_USD, 3);
     assert.equal(await budget({ adapter: new ScriptedModel(() => reply([], "end_turn")) }), 3);
     assert.equal(await budget({ adapter: new ScriptedModel(() => reply([], "end_turn")), planBudgetUsd: 7.5 }), 7.5);
+  });
+
+  it("warns the agent in its last turns, after the turn's tool results", () => {
+    const results = { role: "user" as const, content: [{ type: "tool_result" as const, tool_use_id: "t1", content: "ok" }] };
+    assert.equal(withTurnWarning(results, TURN_WARNING + 1, "task"), results, "plenty of turns left: unchanged");
+    const warned = withTurnWarning(results, TURN_WARNING, "task");
+    const blocks = warned.content as Array<{ type: string; text?: string }>;
+    assert.deepEqual(blocks.map((b) => b.type), ["tool_result", "text"]);
+    assert.match(blocks[1].text!, /^\[ASO\] 10 model turns left in this round, counting this one\. Wrap up now: get the checks passing .* call finish/);
+    assert.match((withTurnWarning(results, 1, "task").content as Array<{ text?: string }>)[1].text!, /^\[ASO\] 1 model turn left/);
+    const plan = withTurnWarning({ role: "user", content: "Continue." }, 3, "plan").content as Array<{ type: string; text: string }>;
+    assert.deepEqual(plan[0], { type: "text", text: "Continue." }, "a plain prompt becomes a text block");
+    assert.match(plan[1].text, /call submit_plan/);
   });
 
   it("puts rework feedback into the task prompt", () => {
@@ -430,6 +443,27 @@ console.log("greeting ok");\n`;
         assert.equal(record.conflicts, undefined, "cleared once the work is handed in");
       },
       { qa: { enabled: false }, llm: { adapter: model } },
+    );
+  });
+
+  it("warns an agent near the turn limit and keeps its unfinished work for the retry", () => {
+    let warnedAt = -1;
+    const model = new ScriptedModel((req) => {
+      const turn = (req.messages.length - 1) / 2;
+      if (warnedAt === -1 && /\[ASO\] \d+ model turns? left/.test(JSON.stringify(req.messages.at(-1)!.content))) warnedAt = turn;
+      // Busy until cut off: writes a file each turn and never finishes.
+      return reply([toolUse(`w${turn}`, "write_file", { path: "greeting.txt", content: `draft ${turn}\n` })]);
+    });
+    return withHub(
+      async (ctx) => {
+        const record = await runGreet(ctx);
+        assert.equal(record.state, "failed");
+        assert.match(record.detail ?? "", /reached the limit of 12 turns \(unfinished work saved on task\/greet @ [0-9a-f]{8}; a retry continues from it\)/);
+        assert.equal(warnedAt, 12 - TURN_WARNING, "warned with 10 turns left");
+        assert.equal(git(ctx.repoDir, "show", "task/greet:greeting.txt"), "draft 11", "the last draft is on the branch");
+        assert.match(git(ctx.repoDir, "log", "-1", "--format=%s", "task/greet"), /^wip: unfinished \(conversation reached the limit of 12 turns\)/);
+      },
+      { qa: { enabled: false }, llm: { adapter: model, maxTurns: 12 } },
     );
   });
 

@@ -208,6 +208,22 @@ export class AgentGitClient {
   }
 
   /**
+   * Push unfinished work to `task/<id>` so a retry continues from it instead of starting over.
+   * Returns the pushed commit, or undefined when there was nothing to save or it couldn't be
+   * (protected files, push refused): saving must never hide the job's real failure.
+   */
+  async saveProgress(reason: string): Promise<string | undefined> {
+    try {
+      const done = await this.completeTask(`wip: unfinished (${reason.split("\n")[0].slice(0, 120)})`);
+      log.info(`saved unfinished work on ${done.branch} @ ${done.commit.slice(0, 8)}`);
+      return done.commit;
+    } catch (err) {
+      log.warn(`could not save unfinished work: ${(err as Error).message}`);
+      return undefined;
+    }
+  }
+
+  /**
    * Bring a resumed task branch up to main for a new round of work. A clean rebase keeps its
    * commits. If the rebase conflicts, the branch starts over from main with the task's changes
    * re-applied by a three-way merge: what merges cleanly is applied, and conflicting files are

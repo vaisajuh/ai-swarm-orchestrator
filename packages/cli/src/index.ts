@@ -103,6 +103,7 @@ function hubOptions(cmd: Command): Command {
     .option("--effort <level>", `model effort: ${EFFORTS.join(", ")}`, parseEffort, (process.env.ASO_EFFORT as Effort) || "high")
     .option("--task-budget <usd>", "estimated LLM spend cap per task", parseUsd, Number(process.env.ASO_TASK_BUDGET) || 5)
     .option("--plan-budget <usd>", "estimated LLM spend cap per planning round", parseUsd, Number(process.env.ASO_PLAN_BUDGET) || 3)
+    .option("--max-turns <n>", "model turns per agent round (task attempt or planning round)", parsePort, Number(process.env.ASO_MAX_TURNS) || 80)
     .option("--llm-concurrency <n>", "concurrent model requests", parsePort, Number(process.env.ASO_LLM_CONCURRENCY) || 4);
 }
 

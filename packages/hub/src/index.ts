@@ -21,7 +21,7 @@ export {
   type RoutingRequest,
 } from "./routing.js";
 export { AnthropicApiAdapter, LlmError, type Effort, type LlmAdapter, type LlmRequest, type LlmResponse } from "./llm/adapter.js";
-export { ConversationManager, DEFAULT_PLAN_BUDGET_USD } from "./llm/conversations.js";
+export { ConversationManager, DEFAULT_PLAN_BUDGET_USD, TURN_WARNING, withTurnWarning } from "./llm/conversations.js";
 export { priceUsage } from "./llm/pricing.js";
 export { architectSystemPrompt, planPrompt, systemPrompt, taskPrompt } from "./llm/prompts.js";
 export { PlanError, PlanManager, type PlanRecord, type PlanState } from "./plans.js";

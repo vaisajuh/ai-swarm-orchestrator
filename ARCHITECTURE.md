@@ -1001,8 +1001,15 @@ text. Unfinished work is never pushed, so it never reaches QA or burns rework ro
 - **Untrusted paths.** Every model-supplied path is checked twice. The schema forbids absolute
   paths, `..` and `.git`. The worker then resolves the real path (following symlinks) and
   rejects anything outside the checkout.
-- **Turn and budget limits.** A conversation is capped at 80 turns, and each task at its
-  budget (default $5, estimated).
+- **Turn and budget limits.** A conversation (one task attempt or planning round) is capped
+  at 80 model turns (`--max-turns`), and each task at its budget (default $5, estimated). In
+  the last 10 turns the Hub adds a note after the turn's tool results telling the agent how
+  many are left and to wrap up (`withTurnWarning`).
+- **Unfinished work is kept.** When an agent is cut off (turn limit, budget, the model gone,
+  or it stopped without `finish`), the worker commits what is in the checkout as
+  `wip: unfinished (…)` and pushes it to `task/<id>` before reporting the failure
+  (`AgentGitClient.saveProgress`). A retry resumes that branch, so the next attempt continues
+  from it.
 - **Idle conversations.** These are dropped after 30 minutes, and as soon as their task is no
   longer being implemented by that node.
 

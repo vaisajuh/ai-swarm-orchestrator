@@ -12,6 +12,9 @@ import {
   type TaskId,
 } from "@aso/shared";
 import { AgentGitClient } from "./git/agent-git-client.js";
+
+/** Failures where the agent was cut off mid-work: the turn limit, its budget, the model gone, or it stopped. */
+const AGENT_CUT_OFF = new Set(["ModelError", "AgentStoppedError"]);
 import { ModelChannel, type ModelReply, type ModelTurn } from "./model-channel.js";
 import { hostRunner, type CommandRunner } from "./sandbox.js";
 
@@ -256,8 +259,10 @@ export class JobRunner {
         },
         state === "failed" ? job : undefined,
       );
+    let opened: AgentGitClient | undefined;
     try {
       const git = await this.openRepo(repoDir, task.project, task.role);
+      opened = git;
       const { resumed } = await git.startTask(task.taskId);
       // A conflict with main is the agent's to resolve: the files come back with markers in them.
       if (resumed) conflicts = (await git.syncForRework()).conflicts;
@@ -286,8 +291,14 @@ export class JobRunner {
         job,
       );
     } catch (err) {
-      log.warn(`task ${task.taskId} failed: ${(err as Error).message}`);
-      status("failed", (err as Error).message);
+      let message = (err as Error).message;
+      log.warn(`task ${task.taskId} failed: ${message}`);
+      // The agent was cut off (turn limit, budget, model gone, stopped): keep what it did.
+      if (opened && AGENT_CUT_OFF.has((err as Error).name)) {
+        const saved = await opened.saveProgress(message);
+        if (saved) message += ` (unfinished work saved on task/${task.taskId} @ ${saved.slice(0, 8)}; a retry continues from it)`;
+      }
+      status("failed", message);
     }
   }
 
